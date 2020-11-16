@@ -167,6 +167,41 @@ jobs:
             docker load -i workspace-full.tar
             ./.circleci/build_image.sh wasm/Dockerfile gitpod/workspace-wasm
 
+  workspace-tk:
+    docker:
+      - image: docker:stable
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          command: |
+            ./.circleci/build_image.sh full/Dockerfile gitpod/workspace-tk WITH_TK=true
+            docker save gitpod/workspace-tk -o workspace-tk.tar
+          no_output_timeout: 60m
+      - persist_to_workspace:
+          root: .
+          paths:
+            - workspace-tk.tar
+
+  workspace-tk-vnc:
+    docker:
+      - image: docker:stable
+    steps:
+      - checkout
+      - setup_remote_docker
+      - attach_workspace:
+          at: .
+      - run:
+          command: |
+            docker load -i workspace-tk.tar
+            ./.circleci/build_image.sh full-vnc/Dockerfile gitpod/workspace-tk-vnc FROM=gitpod/workspace-tk
+            docker save gitpod/workspace-tk-vnc -o workspace-tk-vnc.tar
+          no_output_timeout: 60m
+      - persist_to_workspace:
+          root: .
+          paths:
+            - workspace-tk-vnc.tar
+
 workflows:
   version: 2
   build-and-deploy:
@@ -202,3 +237,7 @@ workflows:
       - workspace-wasm:
           requires:
               - workspace-full
+      - workspace-tk
+      - workspace-tk-vnc:
+          requires:
+            - workspace-tk
